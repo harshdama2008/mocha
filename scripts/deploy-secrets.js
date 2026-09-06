@@ -32,12 +32,12 @@ async function main() {
   });
 
   // On Windows, npx resolves to npx.cmd, which CreateProcess can't launch
-  // directly without going through cmd.exe — spawn/execFileSync throws
-  // ENOENT unless either shell:true is set or the .cmd is named explicitly.
-  const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-
+  // directly — spawn/execFileSync throws ENOENT with plain 'npx', and
+  // EINVAL if you hardcode 'npx.cmd' instead. shell:true routes it through
+  // cmd.exe, which resolves .cmd shims correctly; Node still escapes each
+  // array element itself before building the command line.
   execFileSync(
-    npxCommand,
+    'npx',
     [
       'supabase',
       'secrets',
@@ -48,7 +48,7 @@ async function main() {
       '--project-ref',
       projectRef,
     ],
-    { stdio: 'inherit' }
+    { stdio: 'inherit', shell: true }
   );
 
   console.log('Secrets set (values not printed).');
