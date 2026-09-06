@@ -6,7 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { STORE_EXIT_GEOFENCE } from '@/config';
 import { backendClient } from '@/lib/backendClient';
+import { startExitGeofence } from '@/lib/geofencing';
 import { resolveItemByBarcode } from '@/lib/testItems';
 
 interface ScannedLine {
@@ -51,6 +53,12 @@ export default function ScanScreen() {
           const opened = await backendClient.openCart();
           activeCartId = opened.cartId;
           setCartId(activeCartId);
+          // Arm the exit geofence as soon as there's a cart to close out —
+          // the OS callback (src/lib/geofencing.ts) fires recordExit
+          // whenever the shopper actually leaves, no polling from here.
+          startExitGeofence({ identifier: activeCartId, ...STORE_EXIT_GEOFENCE }).catch(() => {
+            setStatus('Could not arm exit detection — grant location access to finish checkout.');
+          });
         }
         const result = await backendClient.scanItem(activeCartId, data);
         setLines((prev) => [...prev, { cartItemId: result.cartItemId, name: result.itemName }]);

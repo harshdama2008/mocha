@@ -38,6 +38,13 @@
         {
           "cameraPermission": "Mocha needs the camera to scan item barcodes."
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Mocha needs your location in the background to detect when you leave the store and settle your charge.",
+          "isAndroidBackgroundLocationEnabled": true
+        }
       ]
     ],
     "experiments": {

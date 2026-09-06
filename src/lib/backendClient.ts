@@ -7,10 +7,13 @@ import { supabase } from './supabaseClient';
 // this sandbox to deploy that function to, so `scanItem` below is the
 // documented call shape a deployed `cart-scan` function would expect;
 // wiring it up is a deploy-time step, not a code change.
+export type GeofenceExitMethod = 'geofence_exit' | 'geofence_enter';
+
 export interface CartClient {
   openCart(): Promise<{ cartId: string }>;
   scanItem(cartId: string, barcode: string): Promise<{ cartItemId: string; itemName: string }>;
   correctScan(cartId: string, cartItemId: string): Promise<void>;
+  recordExit(cartId: string, method: GeofenceExitMethod): Promise<void>;
   flagDispute(cartId: string, reason: string): Promise<void>;
 }
 
@@ -32,6 +35,13 @@ export const backendClient: CartClient = {
   async correctScan(cartId, cartItemId) {
     const { error } = await supabase.functions.invoke('cart-correct', {
       body: { cartId, cartItemId },
+    });
+    if (error) throw error;
+  },
+
+  async recordExit(cartId, method) {
+    const { error } = await supabase.functions.invoke('cart-exit', {
+      body: { cartId, method },
     });
     if (error) throw error;
   },
