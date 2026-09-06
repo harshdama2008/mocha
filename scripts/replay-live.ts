@@ -4,8 +4,8 @@
 //   node --env-file=.env --import tsx scripts/replay-live.ts
 //
 // Requires MOCHA_KIOSK_STRIPE_CUSTOMER_ID / MOCHA_KIOSK_STRIPE_PAYMENT_METHOD_ID
-// (see scripts/setup-stripe-fixtures.js) already set as function secrets,
-// and the functions deployed. Sets MOCHA_CORRECTION_WINDOW_MS short before
+// (see scripts/deploy-secrets.js) already set as function secrets, and the
+// functions deployed. Sets MOCHA_CORRECTION_WINDOW_MS short before
 // deploying so this doesn't have to wait out a real 10-minute window —
 // see supabase/functions/_shared/backend.ts.
 //

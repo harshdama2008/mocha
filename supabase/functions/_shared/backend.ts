@@ -26,16 +26,16 @@ export const cartService = createCartService(store, stripeGateway, {
 // This app never collects a shopper's card or creates a per-shopper Stripe
 // Customer — there's no auth/session model at all (unattended kiosk, see
 // CLAUDE.md). Every cart authorizes against one pre-registered "house"
-// Customer + PaymentMethod set up once via scripts/setup-stripe-fixtures.ts
-// and stored as function secrets. A real multi-shopper deployment needs a
-// card-on-file flow; that's new scope, not implied by this settlement
-// pipeline.
+// Customer + PaymentMethod, set up once via scripts/deploy-secrets.js
+// (which also sets these as function secrets). A real multi-shopper
+// deployment needs a card-on-file flow; that's new scope, not implied by
+// this settlement pipeline.
 export function getKioskPaymentProfile(): { stripeCustomerId: string; stripePaymentMethodId: string } {
   const stripeCustomerId = getEnv('MOCHA_KIOSK_STRIPE_CUSTOMER_ID');
   const stripePaymentMethodId = getEnv('MOCHA_KIOSK_STRIPE_PAYMENT_METHOD_ID');
   if (!stripeCustomerId || !stripePaymentMethodId) {
     throw new Error(
-      'MOCHA_KIOSK_STRIPE_CUSTOMER_ID / MOCHA_KIOSK_STRIPE_PAYMENT_METHOD_ID are not set — run scripts/setup-stripe-fixtures.ts once and set the printed ids as function secrets.'
+      'MOCHA_KIOSK_STRIPE_CUSTOMER_ID / MOCHA_KIOSK_STRIPE_PAYMENT_METHOD_ID are not set — run scripts/deploy-secrets.js once to create them and set them as function secrets.'
     );
   }
   return { stripeCustomerId, stripePaymentMethodId };

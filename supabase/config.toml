@@ -1,5 +1,9 @@
 project_id = "mocha"
 
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
 # No auth/session model exists in this app (unattended kiosk, not a
 # logged-in-user product), so these are called with just the anon key and
 # don't verify a user JWT. See supabase/functions/_shared/http.ts.
