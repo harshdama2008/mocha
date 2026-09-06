@@ -15,6 +15,21 @@
 // waits sized to MOCHA_CORRECTION_WINDOW_MS instead. The assertions match
 // the corresponding replayer scenario one for one.
 import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
+
+// Node 20 doesn't expose the native WebSocket global @supabase/realtime-js
+// checks for (that lands in Node 22), so supabase-js prints a warning and
+// would otherwise fail to construct its realtime layer. This script never
+// uses realtime — only functions.invoke and table reads — but the client
+// still needs a transport passed explicitly to satisfy that check. This
+// only affects this standalone Node script; the on-device app runs in a
+// browser/RN environment with a native WebSocket already.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- ws's
+// WebSocket type and realtime-js's WebSocketLikeConstructor structurally
+// disagree on event-handler signatures even though ws is exactly what
+// realtime-js asks for at runtime; this is a known type-only interop gap
+// between the two packages, not a real type error.
+const realtimeOptions = { transport: WebSocket as any };
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -28,8 +43,11 @@ if (!url || !anonKey || !serviceRoleKey) {
 }
 
 // anon: exactly what the app uses. admin (service role): verification only, never shipped on-device.
-const anon = createClient(url, anonKey);
-const admin = createClient(url, serviceRoleKey, { auth: { persistSession: false } });
+const anon = createClient(url, anonKey, { realtime: realtimeOptions });
+const admin = createClient(url, serviceRoleKey, {
+  auth: { persistSession: false },
+  realtime: realtimeOptions,
+});
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
