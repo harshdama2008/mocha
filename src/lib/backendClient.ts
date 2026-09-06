@@ -2,11 +2,9 @@ import { supabase } from './supabaseClient';
 
 // The on-device seam onto the settlement pipeline in src/server/. Scanning
 // authorizes a Stripe PaymentIntent, which needs the secret key, so this
-// can never run on-device directly — it goes through a Supabase Edge
-// Function that wraps cartService. There is no Supabase project linked in
-// this sandbox to deploy that function to, so `scanItem` below is the
-// documented call shape a deployed `cart-scan` function would expect;
-// wiring it up is a deploy-time step, not a code change.
+// never runs on-device directly — it goes through the Supabase Edge
+// Functions under supabase/functions/ (cart-open, cart-scan, cart-correct,
+// cart-exit, cart-dispute), which wrap cartService directly.
 export type GeofenceExitMethod = 'geofence_exit' | 'geofence_enter';
 
 export interface CartClient {

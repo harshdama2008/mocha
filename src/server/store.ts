@@ -1,4 +1,4 @@
-import type { Cart, CartItem, Dispute, ExitEvent, ExitMethod, Item } from './types';
+import type { Cart, CartItem, Dispute, ExitEvent, ExitMethod, Item } from './types.ts';
 
 // Data-access seam over the tables in supabase/migrations/0001_init.sql.
 // cartService depends on this interface, not on Supabase directly, so the

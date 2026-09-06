@@ -1,15 +1,18 @@
 import Stripe from 'stripe';
 
+import { getEnv } from './env.ts';
+
 // Server-only. STRIPE_SECRET_KEY must be a sandbox/test key (sk_test_...) —
 // see CLAUDE.md. This module is never imported from src/app or src/lib,
 // which run on-device; it belongs to the Supabase Edge Function-shaped
-// backend under src/server.
+// backend under src/server, and also runs unmodified as the deployed
+// function itself (see supabase/functions/).
 let client: Stripe | null = null;
 
 export function getStripeClient(): Stripe {
   if (client) return client;
 
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const secretKey = getEnv('STRIPE_SECRET_KEY');
   if (!secretKey) {
     throw new Error('STRIPE_SECRET_KEY is not set');
   }

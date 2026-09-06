@@ -1,0 +1,22 @@
+project_id = "mocha"
+
+# No auth/session model exists in this app (unattended kiosk, not a
+# logged-in-user product), so these are called with just the anon key and
+# don't verify a user JWT. See supabase/functions/_shared/http.ts.
+[functions.cart-open]
+verify_jwt = false
+
+[functions.cart-scan]
+verify_jwt = false
+
+[functions.cart-correct]
+verify_jwt = false
+
+[functions.cart-exit]
+verify_jwt = false
+
+[functions.cart-dispute]
+verify_jwt = false
+
+[functions.capture-sweep]
+verify_jwt = false

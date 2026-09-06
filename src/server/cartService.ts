@@ -1,7 +1,7 @@
-import { CORRECTION_WINDOW_MS } from '../config';
-import type { PaymentGateway } from './paymentGateway';
-import type { CartStore } from './store';
-import type { Cart, CartItem, Dispute, ExitEvent, ExitMethod } from './types';
+import { CORRECTION_WINDOW_MS } from '../config.ts';
+import type { PaymentGateway } from './paymentGateway.ts';
+import type { CartStore } from './store.ts';
+import type { Cart, CartItem, Dispute, ExitEvent, ExitMethod } from './types.ts';
 
 export interface CartService {
   openCart(input: { stripeCustomerId: string; stripePaymentMethodId: string }): Promise<Cart>;

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "strict": true,
     "types": ["jest"],
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": [
         "./src/*"
@@ -17,5 +18,9 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "supabase/functions"
   ]
 }

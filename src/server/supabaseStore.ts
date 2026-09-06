@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Cart, CartItem, Dispute, ExitEvent, ExitMethod, Item } from './types';
-import type { CartStore } from './store';
+import type { Cart, CartItem, Dispute, ExitEvent, ExitMethod, Item } from './types.ts';
+import type { CartStore } from './store.ts';
 
 function toCart(row: any): Cart {
   return {

@@ -1,5 +1,5 @@
-import { getStripeClient } from './stripeClient';
-import type { AuthorizedPaymentIntent, AuthorizeParams, PaymentGateway } from './paymentGateway';
+import { getStripeClient } from './stripeClient.ts';
+import type { AuthorizedPaymentIntent, AuthorizeParams, PaymentGateway } from './paymentGateway.ts';
 
 /** Real Stripe-backed PaymentGateway. Test mode only, per CLAUDE.md. */
 export const stripeGateway: PaymentGateway = {
