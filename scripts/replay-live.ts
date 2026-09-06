@@ -4,18 +4,33 @@
 //   node --env-file=.env --import tsx scripts/replay-live.ts
 //
 // Requires MOCHA_KIOSK_STRIPE_CUSTOMER_ID / MOCHA_KIOSK_STRIPE_PAYMENT_METHOD_ID
-// (see scripts/deploy-secrets.js) already set as function secrets, and the
-// functions deployed. Sets MOCHA_CORRECTION_WINDOW_MS short before
-// deploying so this doesn't have to wait out a real 10-minute window —
-// see supabase/functions/_shared/backend.ts.
+// (see scripts/deploy-secrets.js) already set as function secrets, the
+// functions deployed, and the capture-sweep cron migration applied
+// (0002_capture_sweep_cron.sql).
 //
 // This isn't a literal reuse of replayer/engine.ts's synthetic-clock event
-// interpreter: on a real backend "at: 90_000" isn't a wall-clock offset
-// you'd want to sleep for, so each scenario below is reproduced with real
-// waits sized to MOCHA_CORRECTION_WINDOW_MS instead. The assertions match
-// the corresponding replayer scenario one for one.
+// interpreter: on a real backend "at: 90_000" isn't a wall-clock offset you'd
+// want to sleep for. It previously tried to reconstruct the server's
+// correction window client-side via a MOCHA_CORRECTION_WINDOW_MS env var —
+// that value only ever existed as a Supabase secret (set to 8000ms) and was
+// never in .env, so it silently fell back to a local default of 5000ms.
+// That guess was ~3s short of the real window, so this script's own
+// capture-sweep calls were consistently too early and correctly told "not
+// due yet"; the cart only ever actually settled once the once-a-minute cron
+// fallback got to it, up to ~60s later — which is exactly the intermittent,
+// timing-dependent failures this was producing. Polling for the expected
+// status instead of guessing a sleep duration removes the need for this
+// script to know the server's window at all.
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
+
+const POLL_TIMEOUT_MS = 90_000;
+const POLL_INTERVAL_MS = 5_000;
+// Only used for a *negative* check (still pending_capture mid-window) where
+// being early is the point — comfortably shorter than any real window
+// (default 10 minutes, or the 8s override currently set live), never used
+// to predict when something should have already happened.
+const SAFELY_MID_WINDOW_MS = 2_000;
 
 // Node 20 doesn't expose the native WebSocket global @supabase/realtime-js
 // checks for (that lands in Node 22), so supabase-js prints a warning and
@@ -34,7 +49,6 @@ const realtimeOptions = { transport: WebSocket as any };
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const correctionWindowMs = Number(process.env.MOCHA_CORRECTION_WINDOW_MS ?? '5000');
 
 if (!url || !anonKey || !serviceRoleKey) {
   throw new Error(
@@ -80,6 +94,31 @@ async function getCartItemRow(cartItemId: string) {
   return data;
 }
 
+/**
+ * Polls the cart's status (also nudging it along with a capture-sweep call
+ * each tick, so this doesn't just passively wait on the once-a-minute
+ * cron) until `expected` is reached or POLL_TIMEOUT_MS elapses. Replaces a
+ * fixed sleep-then-check-once, which raced against real settlement timing.
+ */
+async function waitForCartStatus(cartId: string, expected: string): Promise<Record<string, unknown>> {
+  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  let lastStatus = '(unknown)';
+
+  while (Date.now() < deadline) {
+    await invoke('capture-sweep').catch(() => {
+      // A transient error here just means this tick didn't hasten anything —
+      // the next poll (or the cron) still gets a chance. Only a timeout with
+      // the wrong final status is a real failure.
+    });
+    const cart = await getCartRow(cartId);
+    lastStatus = cart.status as string;
+    if (lastStatus === expected) return cart;
+    await sleep(POLL_INTERVAL_MS);
+  }
+
+  throw new Error(`timed out after ${POLL_TIMEOUT_MS}ms waiting for ${expected}, last status was ${lastStatus}`);
+}
+
 async function scanSmallItemSet() {
   const { cartId } = await invoke<{ cartId: string }>('cart-open');
   const barcodes = ['049000028911', '012345678905', '041220576463', '811620021952'];
@@ -96,17 +135,18 @@ async function exitThenReturn() {
   const { cartId } = await invoke<{ cartId: string }>('cart-open');
   await invoke('cart-scan', { cartId, barcode: '012345678905' });
   await invoke('cart-exit', { cartId, method: 'geofence_exit' });
-  await sleep(Math.min(1000, correctionWindowMs / 2));
+  await sleep(SAFELY_MID_WINDOW_MS);
   await invoke('cart-exit', { cartId, method: 'geofence_enter' });
 
   await invoke('capture-sweep'); // mid-window: must be a no-op
-  let cart = await getCartRow(cartId);
-  assert(cart.status === 'pending_capture', `expected still pending_capture, got ${cart.status}`);
+  const stillPending = await getCartRow(cartId);
+  assert(
+    stillPending.status === 'pending_capture',
+    `expected still pending_capture, got ${stillPending.status}`
+  );
 
-  await sleep(correctionWindowMs);
-  await invoke('capture-sweep');
-  cart = await getCartRow(cartId);
-  assert(cart.status === 'settled', `expected settled, got ${cart.status}`);
+  const settled = await waitForCartStatus(cartId, 'settled');
+  assert(settled.status === 'settled', `expected settled, got ${settled.status}`);
   console.log('[ok] exit-then-return (live)');
 }
 
@@ -117,10 +157,7 @@ async function goodwinHall() {
   await invoke('cart-exit', { cartId, method: 'geofence_exit' });
   await invoke('cart-correct', { cartId, cartItemId: duplicate.cartItemId });
 
-  await sleep(correctionWindowMs);
-  await invoke('capture-sweep');
-
-  const cart = await getCartRow(cartId);
+  const cart = await waitForCartStatus(cartId, 'settled');
   assert(cart.status === 'settled', `expected settled, got ${cart.status}`);
   const originalRow = await getCartItemRow(original.cartItemId);
   const duplicateRow = await getCartItemRow(duplicate.cartItemId);
@@ -135,11 +172,15 @@ async function disputeCancelsInWindow() {
   await invoke('cart-exit', { cartId, method: 'geofence_exit' });
   await invoke('cart-dispute', { cartId, reason: 'live smoke test' });
 
-  await sleep(correctionWindowMs);
-  await invoke('capture-sweep');
+  // The dispute already moved status to 'disputed' synchronously — no
+  // window to wait out here. Just confirm a sweep (cron or manual) can't
+  // move it to settled afterward.
+  const disputed = await getCartRow(cartId);
+  assert(disputed.status === 'disputed', `expected disputed, got ${disputed.status}`);
 
-  const cart = await getCartRow(cartId);
-  assert(cart.status === 'disputed', `expected disputed, got ${cart.status}`);
+  await invoke('capture-sweep');
+  const stillDisputed = await getCartRow(cartId);
+  assert(stillDisputed.status === 'disputed', `expected still disputed, got ${stillDisputed.status}`);
   console.log('[ok] dispute-cancels-in-window (live)');
 }
 
@@ -148,10 +189,7 @@ async function captureThenDispute() {
   await invoke('cart-scan', { cartId, barcode: '041220576463' });
   await invoke('cart-exit', { cartId, method: 'geofence_exit' });
 
-  await sleep(correctionWindowMs);
-  await invoke('capture-sweep');
-
-  let cart = await getCartRow(cartId);
+  let cart = await waitForCartStatus(cartId, 'settled');
   assert(cart.status === 'settled', `expected settled, got ${cart.status}`);
 
   await invokeExpectError('cart-dispute', { cartId, reason: 'too late' });
