@@ -31,8 +31,13 @@ async function main() {
     customer: customer.id,
   });
 
+  // On Windows, npx resolves to npx.cmd, which CreateProcess can't launch
+  // directly without going through cmd.exe — spawn/execFileSync throws
+  // ENOENT unless either shell:true is set or the .cmd is named explicitly.
+  const npxCommand = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+
   execFileSync(
-    'npx',
+    npxCommand,
     [
       'supabase',
       'secrets',
