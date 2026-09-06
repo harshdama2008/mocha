@@ -1,4 +1,5 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { router } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -114,6 +115,17 @@ export default function ScanScreen() {
             {line.name}
           </ThemedText>
         ))}
+        {cartId && lines.length > 0 && (
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/correction',
+                params: { cartId, linesJson: JSON.stringify(lines) },
+              })
+            }>
+            <ThemedText type="link">Review &amp; flag this charge</ThemedText>
+          </Pressable>
+        )}
       </SafeAreaView>
     </ThemedView>
   );
