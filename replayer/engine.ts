@@ -4,7 +4,7 @@
 // state machine from src/server/cartService.ts against the in-memory
 // fakes from src/server/testing/, so a scenario here exercises exactly
 // the same code path a deployed backend would.
-import { createCartService } from '../src/server/cartService';
+import { createCartService, type CartService } from '../src/server/cartService';
 import { createFakePaymentGateway, type FakeIntent } from '../src/server/testing/fakePaymentGateway';
 import { createInMemoryStore } from '../src/server/testing/inMemoryStore';
 import type { Cart, CartItem, ExitMethod, Item } from '../src/server/types';
@@ -30,6 +30,8 @@ export interface ReplayResult {
   /** Every cart_item including voided ones, in scan order. */
   cartItems: CartItem[];
   intents: Map<string, FakeIntent>;
+  /** The live cartService bound to this run's store/gateway, for scenarios that assert a call after the scripted events is rejected (e.g. capture-then-dispute). */
+  cartService: CartService;
 }
 
 export async function runScenario(scenario: ReplayScenario): Promise<ReplayResult> {
@@ -77,5 +79,5 @@ export async function runScenario(scenario: ReplayScenario): Promise<ReplayResul
 
   const finalCart = await store.getCart(cart.id);
   const finalItems = await store.listCartItems(cart.id, { includeVoided: true });
-  return { cart: finalCart, cartItems: finalItems, intents: gateway.intents };
+  return { cart: finalCart, cartItems: finalItems, intents: gateway.intents, cartService };
 }

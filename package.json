@@ -37,6 +37,7 @@
     "@types/react": "~19.2.2",
     "jest": "^29.7.0",
     "jest-expo": "^57.0.5",
+    "tsx": "^4.23.13",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -46,7 +47,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "test": "jest",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "replay": "tsx replayer/run.ts"
   },
   "jest": {
     "preset": "jest-expo"
