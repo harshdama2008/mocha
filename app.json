@@ -32,6 +32,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Mocha needs the camera to scan item barcodes."
+        }
       ]
     ],
     "experiments": {
