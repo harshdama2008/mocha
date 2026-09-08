@@ -63,6 +63,11 @@ export function createInMemoryStore(seedItems: Item[] = []): CartStore & { seedI
       return item;
     },
 
+    async getItemsByIds(itemIds) {
+      const idSet = new Set(itemIds);
+      return [...items.values()].filter((item) => idSet.has(item.id));
+    },
+
     async addCartItem({ cartId, itemId, stripePaymentIntentId }) {
       const cartItem: CartItem = {
         id: nextId('cart_item'),

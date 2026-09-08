@@ -163,6 +163,16 @@ async function goodwinHall() {
   const duplicateRow = await getCartItemRow(duplicate.cartItemId);
   assert(originalRow.voided_at === null, 'original scan should not be voided');
   assert(duplicateRow.voided_at !== null, 'duplicate scan should be voided');
+
+  // The status screen's own read path: anon key, cart-status function, no
+  // direct table access (RLS denies that now — see 0003_enable_rls.sql).
+  const receipt = await invoke<{ status: string; totalCents: number; lines: { name: string }[] }>(
+    'cart-status',
+    { cartId }
+  );
+  assert(receipt.status === 'settled', `cart-status: expected settled, got ${receipt.status}`);
+  assert(receipt.totalCents === 500, `cart-status: expected 500 cents (one drink), got ${receipt.totalCents}`);
+  assert(receipt.lines.length === 1, `cart-status: expected 1 line, got ${receipt.lines.length}`);
   console.log('[ok] goodwin-hall (live, permanent scenario)');
 }
 
@@ -181,6 +191,9 @@ async function disputeCancelsInWindow() {
   await invoke('capture-sweep');
   const stillDisputed = await getCartRow(cartId);
   assert(stillDisputed.status === 'disputed', `expected still disputed, got ${stillDisputed.status}`);
+
+  const receipt = await invoke<{ status: string }>('cart-status', { cartId });
+  assert(receipt.status === 'disputed', `cart-status: expected disputed, got ${receipt.status}`);
   console.log('[ok] dispute-cancels-in-window (live)');
 }
 

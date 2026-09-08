@@ -70,6 +70,12 @@ export default function CorrectionScreen() {
 
         {status && <ThemedText type="small">{status}</ThemedText>}
 
+        {cartId && (
+          <Pressable onPress={() => router.push({ pathname: '/status', params: { cartId } })}>
+            <ThemedText type="link">View charge status</ThemedText>
+          </Pressable>
+        )}
+
         <Pressable onPress={() => router.back()}>
           <ThemedText type="link">Back</ThemedText>
         </Pressable>

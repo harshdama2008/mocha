@@ -126,6 +126,11 @@ export default function ScanScreen() {
             <ThemedText type="link">Review &amp; flag this charge</ThemedText>
           </Pressable>
         )}
+        {cartId && lines.length > 0 && (
+          <Pressable onPress={() => router.push({ pathname: '/status', params: { cartId } })}>
+            <ThemedText type="link">Check charge status</ThemedText>
+          </Pressable>
+        )}
       </SafeAreaView>
     </ThemedView>
   );

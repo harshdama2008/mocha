@@ -10,6 +10,8 @@ export interface CartStore {
   updateCart(cartId: string, patch: Partial<Cart>): Promise<Cart>;
 
   getItemByBarcode(barcode: string): Promise<Item>;
+  /** Batched lookup for the cart-status receipt, so it's one query per check, not one per line item. */
+  getItemsByIds(itemIds: string[]): Promise<Item[]>;
 
   addCartItem(input: {
     cartId: string;

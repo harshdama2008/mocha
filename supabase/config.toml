@@ -22,5 +22,8 @@ verify_jwt = false
 [functions.cart-dispute]
 verify_jwt = false
 
+[functions.cart-status]
+verify_jwt = false
+
 [functions.capture-sweep]
 verify_jwt = false

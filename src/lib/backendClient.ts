@@ -7,12 +7,26 @@ import { supabase } from './supabaseClient';
 // cart-exit, cart-dispute), which wrap cartService directly.
 export type GeofenceExitMethod = 'geofence_exit' | 'geofence_enter';
 
+export type CartStatus = 'open' | 'pending_capture' | 'settled' | 'disputed';
+
+export interface CartReceiptLine {
+  name: string;
+  priceCents: number;
+}
+
+export interface CartReceipt {
+  status: CartStatus;
+  totalCents: number;
+  lines: CartReceiptLine[];
+}
+
 export interface CartClient {
   openCart(): Promise<{ cartId: string }>;
   scanItem(cartId: string, barcode: string): Promise<{ cartItemId: string; itemName: string }>;
   correctScan(cartId: string, cartItemId: string): Promise<void>;
   recordExit(cartId: string, method: GeofenceExitMethod): Promise<void>;
   flagDispute(cartId: string, reason: string): Promise<void>;
+  getCartStatus(cartId: string): Promise<CartReceipt>;
 }
 
 export const backendClient: CartClient = {
@@ -49,5 +63,13 @@ export const backendClient: CartClient = {
       body: { cartId, reason },
     });
     if (error) throw error;
+  },
+
+  async getCartStatus(cartId) {
+    const { data, error } = await supabase.functions.invoke('cart-status', {
+      body: { cartId },
+    });
+    if (error) throw error;
+    return data;
   },
 };

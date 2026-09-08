@@ -111,6 +111,13 @@ export function createSupabaseStore(client: SupabaseClient): CartStore {
       return toItem(assertRow(data, error, 'getItemByBarcode'));
     },
 
+    async getItemsByIds(itemIds) {
+      if (itemIds.length === 0) return [];
+      const { data, error } = await client.from('items').select().in('id', itemIds);
+      if (error) throw new Error(`getItemsByIds: ${error.message}`);
+      return (data ?? []).map(toItem);
+    },
+
     async addCartItem({ cartId, itemId, stripePaymentIntentId }) {
       const { data, error } = await client
         .from('cart_items')
