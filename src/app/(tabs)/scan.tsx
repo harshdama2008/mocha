@@ -131,6 +131,31 @@ export default function ScanScreen() {
             <ThemedText type="link">Check charge status</ThemedText>
           </Pressable>
         )}
+        {/* __DEV__ is a React Native global that's always false in a
+            production/release bundle — this can never ship visible.
+            Real exits come from the OS geofence callback (src/lib/geofencing.ts)
+            firing on an actual location change; the Android emulator's
+            Geofencer has been refusing to arm that at all ("registration
+            not permitted"), so there's currently no way to reach the exit
+            step on-device without this. It calls the exact same
+            backendClient.recordExit the real callback calls — same
+            Edge Function, same cartService.recordExitEvent, same
+            open -> pending_capture transition and capture-window math.
+            This only substitutes for the OS trigger, not anything
+            downstream of it. */}
+        {__DEV__ && cartId && (
+          <Pressable
+            onPress={async () => {
+              try {
+                await backendClient.recordExit(cartId, 'geofence_exit');
+                setStatus('Simulated exit recorded (dev only — not real exit detection).');
+              } catch (err) {
+                setStatus(err instanceof Error ? err.message : 'Could not simulate exit.');
+              }
+            }}>
+            <ThemedText type="link">Simulate exit (dev only)</ThemedText>
+          </Pressable>
+        )}
       </SafeAreaView>
     </ThemedView>
   );
