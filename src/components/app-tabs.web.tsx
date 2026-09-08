@@ -6,6 +6,7 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
+import type { Href } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
 
@@ -21,7 +22,11 @@ export default function AppTabs() {
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
-          <TabTrigger name="home" href="/" asChild>
+          {/* Typed routes lists "/index" as this route's canonical href, but
+              that path 404s at runtime (confirmed via deep link) — "/" is
+              the one that actually resolves, the generator just doesn't
+              enumerate it for an index nested in a group under a Stack. */}
+          <TabTrigger name="home" href={'/' as Href} asChild>
             <TabButton>Home</TabButton>
           </TabTrigger>
           <TabTrigger name="explore" href="/explore" asChild>
